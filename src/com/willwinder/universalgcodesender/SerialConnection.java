@@ -28,6 +28,7 @@ import gnu.io.CommPortIdentifier;
 import gnu.io.SerialPort;
 import gnu.io.SerialPortEvent;
 import gnu.io.SerialPortEventListener;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -74,7 +75,7 @@ public class SerialConnection extends Connection implements SerialPortEventListe
         
         boolean returnCode;
 
-        CommPortIdentifier portIdentifier = CommPortIdentifier.getPortIdentifier(name);
+        CommPortIdentifier portIdentifier = CommPortIdentifier.getPortIdentifier(this.resolveSymlink(name));
            
         if (portIdentifier.isCurrentlyOwned()) {
             throw new Exception(Localization.getString("connection.exception.inuse"));
@@ -189,12 +190,23 @@ public class SerialConnection extends Connection implements SerialPortEventListe
     @Override
     public boolean supports(String portname) {
         List<CommPortIdentifier> ports = CommUtils.getSerialPortList();
-        for (CommPortIdentifier cpi: ports) {
-            if (cpi.getName().equals(portname)) {
-                return true;
+        for (CommPortIdentifier cpi : ports) {
+            String resolvedName;
+            try {
+                resolvedName = resolveSymlink(portname);
+                if (resolvedName.equals(cpi.getName())) {
+                    return true;
+                }
+            } catch (IOException ex) {
+                return false;
             }
         }
 
         return false;
+    }
+    
+    private String resolveSymlink(String portname) throws IOException {
+         File f = new File(portname);
+         return f.getCanonicalPath();
     }
 }
